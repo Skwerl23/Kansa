@@ -1159,35 +1159,39 @@ Param(
     $Error.Clear()
 
     if (Get-Command -Name Logparser.exe) {
-        $AnalysisScripts = @()
-        $AnalysisScripts = Get-Content "$StartingPath\Analysis\Analysis.conf" | Foreach-Object { $_.Trim() } | ? { $_ -gt 0 -and (!($_.StartsWith("#"))) }
+    	try {
+			$AnalysisScripts = @()
+			$AnalysisScripts = Get-Content "$StartingPath\Analysis\Analysis.conf" | Foreach-Object { $_.Trim() } | ? { $_ -gt 0 -and (!($_.StartsWith("#"))) }
 
-        $AnalysisOutPath = $OutputPath + "\AnalysisReports\"
-        [void] (New-Item -Path $AnalysisOutPath -ItemType Directory -Force)
+			$AnalysisOutPath = $OutputPath + "\AnalysisReports\"
+			[void] (New-Item -Path $AnalysisOutPath -ItemType Directory -Force)
 
-        # Get our DATADIR directive
-        $DirectivesHash  = @{}
-        $AnalysisScripts | Foreach-Object { $AnalysisScript = $_
-            $DirectivesHash = Get-Directives $AnalysisScript -AnalysisPath
-            $DataDir = $($DirectivesHash.Get_Item("DATADIR"))
-            if ($DataDir) {
-                if (Test-Path "$OutputPath$DataDir") {
-                    Push-Location
-                    Set-Location "$OutputPath$DataDir"
-                    Write-Verbose "Running analysis script: ${AnalysisScript}"
-                    $AnalysisFile = ((((($AnalysisScript -split "\\")[1]) -split "Get-")[1]) -split ".ps1")[0]
-                    # As of this writing, all analysis output files are tsv
-                    & "$StartingPath\Analysis\${AnalysisScript}" | Set-Content -Encoding $Encoding ($AnalysisOutPath + $AnalysisFile + ".tsv")
-                    Pop-Location
-                } else {
-                    "WARNING: Analysis: No data found for ${AnalysisScript}." | Add-Content -Encoding $Encoding $ErrorLog
-                    Continue
-                }
-            } else {
-                "WARNING: Analysis script, .\Analysis\${AnalysisScript}, missing # DATADIR directive, skipping analysis." | Add-Content -Encoding $Encoding $ErrorLog
-                Continue
-            }        
-        }
+			# Get our DATADIR directive
+			$DirectivesHash  = @{}
+			$AnalysisScripts | Foreach-Object { $AnalysisScript = $_
+				$DirectivesHash = Get-Directives $AnalysisScript -AnalysisPath
+				$DataDir = $($DirectivesHash.Get_Item("DATADIR"))
+				if ($DataDir) {
+				if (Test-Path "$OutputPath$DataDir") {
+					Push-Location
+					Set-Location "$OutputPath$DataDir"
+					Write-Verbose "Running analysis script: ${AnalysisScript}"
+					$AnalysisFile = ((((($AnalysisScript -split "\\")[1]) -split "Get-")[1]) -split ".ps1")[0]
+					# As of this writing, all analysis output files are tsv
+					& "$StartingPath\Analysis\${AnalysisScript}" | Set-Content -Encoding $Encoding ($AnalysisOutPath + $AnalysisFile + ".tsv")
+					Pop-Location
+				} else {
+					"WARNING: Analysis: No data found for ${AnalysisScript}." | Add-Content -Encoding $Encoding $ErrorLog
+					Continue
+				}
+				} else {
+				"WARNING: Analysis script, .\Analysis\${AnalysisScript}, missing # DATADIR directive, skipping analysis." | Add-Content -Encoding $Encoding $ErrorLog
+				Continue
+				}        
+			}
+		} catch {
+			"WARNING: Analysis Script ${AnalysisScript} Failed, Moving to next Analysis Script"
+	}
     } else {
         "Kansa could not find logparser.exe in path. Skipping Analysis." | Add-Content -Encoding $Encoding -$ErrorLog
     }
