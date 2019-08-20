@@ -73,6 +73,17 @@ use Remote System Administration Tools (a separate installed package)
 to query Active Directory and will build a list of hosts to target 
 automatically.
 
+.PARAMETER ThrottleLimit
+An optional parameter, the amount of computers to request information from
+simultaneously - Default is 0, which runs 32 simultaneous requests by PowerShell
+Used to limit bandwidth mostly. But also minimal effects on local cpu/ram usage 
+
+.PARAMETER ComputerLimit
+An optional parameter, the amount of computers to interact with - default is
+10million Suggested to use to lower cpu/ram usage per session, will slow down the
+process a little bit but will not bog down your scanning machine - recommended
+around 50 per 2 gigs of computer ram.
+
 .PARAMETER Credential
 An optional credential that the script will use for execution. Use the
 $Credential = Get-Credential convention to populate a suitable variable.
@@ -727,7 +738,10 @@ Param(
             }
         }
                             
+        If (-not (Test-Path "$OutputPath\$GetlessMod$ArgFileName")){
         [void] (New-Item -Path $OutputPath -name ($GetlessMod + $ArgFileName) -ItemType Directory)
+        }
+
         $Job.ChildJobs | Foreach-Object { $ChildJob = $_
             $Recpt = Receive-Job $ChildJob
             
@@ -1314,14 +1328,40 @@ if ($TargetList) {
 
 # Finally, let's gather some data. #
 # If you're just logging everything to a file, no need to pass your special logging config
-if ($OutputFormat -eq "csv" -or $OutputFormat -eq "json" -or $OutputFormat -eq "tsv" -or $OutputFormat -eq "xml") {
-    Get-TargetData -Targets $Targets -Modules $Modules -Credential $Credential -ThrottleLimit $ThrottleLimit
+if (!$Target) {
+    [int]$count = $ComputerLimit
+    [int]$total = $targets.Count
+    [int]$rounds = [math]::Ceiling($total / $count)
+    if ($rounds -le 1){$rounds = 1}
+    $start = 0
+    foreach ($chunk in 1..$rounds){
+        if ($count -gt $total){$count = $total}
+        $end = $count - 1
+        $throttleTargets = $targets[$Start..$end]
+
+        Write-Progress -Activity "Performing checks on computers $($start + 1) through $($end+1) out of $total" -PercentComplete (($chunk / $rounds) * 100)
+
+        $start = $start + $ComputerLimit
+        $count = $count + $ComputerLimit
+        if ($OutputFormat -eq "csv" -or $OutputFormat -eq "json" -or $OutputFormat -eq "tsv" -or $OutputFormat -eq "xml") {
+            Get-TargetData -Targets $throttleTargets -Modules $Modules -Credential $Credential -ThrottleLimit $ThrottleLimit
+        }
+        # However, if you are using a special logging config, you need to send it off to Get-TargetData
+        elseif ($OutputFormat -eq "gl" -or $OutputFormat -eq "splunk") {
+            Get-TargetData -Targets $throttleTargets -Modules $Modules -Credential $Credential -ThrottleLimit $ThrottleLimit -LogConf $LogConf
+        }
+        # Done gathering data. #
+    }
+} else {
+       if ($OutputFormat -eq "csv" -or $OutputFormat -eq "json" -or $OutputFormat -eq "tsv" -or $OutputFormat -eq "xml") {
+            Get-TargetData -Targets $Targets -Modules $Modules -Credential $Credential -ThrottleLimit $ThrottleLimit
+        }
+        # However, if you are using a special logging config, you need to send it off to Get-TargetData
+        elseif ($OutputFormat -eq "gl" -or $OutputFormat -eq "splunk") {
+            Get-TargetData -Targets $Targets -Modules $Modules -Credential $Credential -ThrottleLimit $ThrottleLimit -LogConf $LogConf
+        }
+        # Done gathering data. #
 }
-# However, if you are using a special logging config, you need to send it off to Get-TargetData
-elseif ($OutputFormat -eq "gl" -or $OutputFormat -eq "splunk") {
-    Get-TargetData -Targets $Targets -Modules $Modules -Credential $Credential -ThrottleLimit $ThrottleLimit -LogConf $LogConf
-}
-# Done gathering data. #
 
 # Are we running analysis scripts? #
 if ($Analysis) {
