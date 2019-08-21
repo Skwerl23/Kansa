@@ -270,29 +270,31 @@ Param(
     [Parameter(Mandatory=$False,Position=8)]
         [Int]$ThrottleLimit=0,
     [Parameter(Mandatory=$False,Position=9)]
+        [Int]$ComputerLimit=1000000,
+    [Parameter(Mandatory=$False,Position=10)]
     [ValidateSet("Ascii","BigEndianUnicode","Byte","Default","Oem","String","Unicode","Unknown","UTF32","UTF7","UTF8")]
         [String]$Encoding="Unicode",
-    [Parameter(Mandatory=$False,Position=10)]
-        [Switch]$UpdatePath,
     [Parameter(Mandatory=$False,Position=11)]
-        [Switch]$ListModules,
+        [Switch]$UpdatePath,
     [Parameter(Mandatory=$False,Position=12)]
-        [Switch]$ListAnalysis,
+        [Switch]$ListModules,
     [Parameter(Mandatory=$False,Position=13)]
-        [Switch]$Analysis,
+        [Switch]$ListAnalysis,
     [Parameter(Mandatory=$False,Position=14)]
-        [Switch]$Transcribe,
+        [Switch]$Analysis,
     [Parameter(Mandatory=$False,Position=15)]
-        [Switch]$Quiet=$False,
+        [Switch]$Transcribe,
     [Parameter(Mandatory=$False,Position=16)]
-        [Switch]$UseSSL,
+        [Switch]$Quiet=$False,
     [Parameter(Mandatory=$False,Position=17)]
+        [Switch]$UseSSL,
+    [Parameter(Mandatory=$False,Position=18)]
         [ValidateRange(0,65535)]
         [uint16]$Port=5985,
-    [Parameter(Mandatory=$False,Position=18)]
+    [Parameter(Mandatory=$False,Position=19)]
         [ValidateSet("Basic","CredSSP","Default","Digest","Kerberos","Negotiate","NegotiateWithImplicitCredential")]
         [String]$Authentication="Kerberos",
-    [Parameter(Mandatory=$false,Position=19)]
+    [Parameter(Mandatory=$false,Position=20)]
         [int32]$JSONDepth=20
 )
 
